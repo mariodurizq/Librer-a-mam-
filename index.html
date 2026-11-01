@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi librería</title>
+<meta name="description" content="Catálogo de la librería de mamá: busca, filtra y añade libros.">
+<meta name="theme-color" content="#f4eee4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%238a3b2a'/%3E%3Crect x='24' y='22' width='14' height='56' rx='3' fill='%23f4eee4'/%3E%3Crect x='43' y='22' width='14' height='56' rx='3' fill='%23e4b363'/%3E%3Crect x='62' y='26' width='14' height='52' rx='3' fill='%23f4eee4' transform='rotate(8 69 52)'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><i></i><i></i><i></i></span>
+      <div>
+        <h1>Mi librería</h1>
+        <p id="subtitle">Cargando…</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab on" data-view="libros" role="tab">Libros</button>
+      <button class="tab" data-view="estanterias" role="tab">Estanterías</button>
+      <button class="tab" data-view="resumen" role="tab">Resumen</button>
+    </nav>
+    <div class="top-actions">
+      <button class="btn ghost" id="btnRandom" title="Sugerir un libro al azar">🎲 <span class="hide-sm">Sorpréndeme</span></button>
+      <button class="btn ghost" id="btnMenu" title="Exportar / copia de seguridad">⋯</button>
+      <button class="btn primary" id="btnAdd">＋ <span class="hide-sm">Añadir libro</span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="view-libros" class="view">
+    <div class="searchbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm5 12 4 4"/></svg>
+        <input id="q" type="search" placeholder="Busca por título, autor, editorial o nota…" autocomplete="off">
+        <button id="qClear" class="x" hidden aria-label="Borrar búsqueda">✕</button>
+      </div>
+      <button class="btn ghost" id="btnFilters">Filtros <b id="fCount" hidden></b></button>
+    </div>
+    <div class="chips" id="catChips" aria-label="Categorías"></div>
+    <div class="filters" id="filters" hidden>
+      <label>Mueble<select id="fMueble"></select></label>
+      <label>Balda<select id="fBalda"></select></label>
+      <label>Confianza de lectura<select id="fConf"><option value="">Todas</option><option>Alta</option><option>Media</option><option>Baja</option></select></label>
+      <label>Origen<select id="fOrigen"><option value="">Todos</option><option value="video">De los vídeos</option><option value="manual">Añadidos a mano</option></select></label>
+      <label>Estado<select id="fEstado"><option value="">Todos</option><option value="leido">Leídos</option><option value="pendiente">Sin marcar</option><option value="fav">Favoritos</option></select></label>
+      <label>Ordenar por<select id="fSort"><option value="orden">Posición en la estantería</option><option value="titulo">Título (A–Z)</option><option value="autor">Autor (A–Z)</option><option value="nuevos">Añadidos recientemente</option></select></label>
+      <button class="btn ghost" id="fReset">Limpiar filtros</button>
+    </div>
+    <div class="result-bar">
+      <span id="resultCount"></span>
+      <div class="seg" role="group" aria-label="Vista">
+        <button data-layout="grid" class="on" title="Tarjetas">▦</button>
+        <button data-layout="list" title="Lista">☰</button>
+      </div>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty" hidden>
+      <p>No hay libros con esos filtros.</p>
+      <button class="btn" id="emptyAdd">Añadir este libro a mano</button>
+    </div>
+    <div class="more"><button class="btn ghost" id="btnMore" hidden>Mostrar más</button></div>
+  </section>
+
+  <section id="view-estanterias" class="view" hidden></section>
+  <section id="view-resumen" class="view" hidden></section>
+</main>
+
+<!-- Detalle -->
+<dialog id="dlgDetail" class="dlg"><div id="detail"></div></dialog>
+
+<!-- Formulario -->
+<dialog id="dlgForm" class="dlg">
+  <form id="form" method="dialog" autocomplete="off">
+    <div class="dlg-head"><h2 id="formTitle">Añadir libro</h2><button type="button" class="x" data-close aria-label="Cerrar">✕</button></div>
+    <div class="form-grid">
+      <label class="span2">Título *<input name="titulo" required maxlength="200"></label>
+      <label>Autor<input name="autor" list="dlAutores" maxlength="160"></label>
+      <label>Editorial / colección<input name="editorial" list="dlEditoriales" maxlength="120"></label>
+      <label>Categoría<input name="categoria" list="dlCategorias" maxlength="60" required></label>
+      <label>Tomo / nº<input name="tomo" maxlength="40" placeholder="ej. vol. II, nº 12"></label>
+      <label>Mueble<input name="mueble" type="number" min="1" step="1" inputmode="numeric"></label>
+      <label>Balda<input name="balda" type="number" min="1" step="1" inputmode="numeric"></label>
+      <label>Posición<input name="posicion" type="number" min="1" step="1" inputmode="numeric" placeholder="auto"></label>
+      <label>Confianza<select name="confianza"><option>Alta</option><option>Media</option><option>Baja</option></select></label>
+      <label class="span2">Notas<textarea name="notas" rows="3" maxlength="600" placeholder="Edición, estado, dedicatoria, dónde está exactamente…"></textarea></label>
+    </div>
+    <datalist id="dlAutores"></datalist><datalist id="dlEditoriales"></datalist><datalist id="dlCategorias"></datalist>
+    <div class="dlg-foot">
+      <span class="hint" id="formHint"></span>
+      <button type="button" class="btn ghost" data-close>Cancelar</button>
+      <button type="submit" class="btn primary" id="formSave">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Menú exportar -->
+<dialog id="dlgMenu" class="dlg small">
+  <div class="dlg-head"><h2>Guardar y compartir</h2><button type="button" class="x" data-close aria-label="Cerrar">✕</button></div>
+  <p class="muted">Los libros que añadas o edites aquí se guardan <b>en este navegador</b>. Para publicarlos en la web, descarga <code>libros.js</code> y sustituye el de la carpeta <code>data/</code> del repositorio.</p>
+  <div class="menu-list">
+    <button class="btn" id="exJs">⬇ Descargar libros.js (para publicar)</button>
+    <button class="btn" id="exCsv">⬇ Descargar CSV (abrir en Excel)</button>
+    <button class="btn" id="exBackup">⬇ Copia de seguridad de mis cambios</button>
+    <label class="btn file">⬆ Restaurar copia de seguridad<input type="file" id="imBackup" accept="application/json,.json" hidden></label>
+    <button class="btn danger" id="exReset">Borrar mis cambios en este navegador</button>
+  </div>
+  <p class="muted small" id="menuStats"></p>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="data/libros.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
