@@ -93,7 +93,7 @@
     grid.className = 'grid' + (F.layout === 'list' ? ' list' : '');
     grid.innerHTML = list.slice(0, F.shown).map(b => cardHtml(b, fav, read)).join('');
     $('#empty').hidden = list.length > 0;
-    $('#btnMore').hidden = list.length <= F.shown;
+    $('#btnMore').hidden = list.length <= F.shown || !list.length;
     $('#btnMore').textContent = `Mostrar más (${list.length - F.shown} restantes)`;
     $('#resultCount').textContent = list.length === BOOKS.length ? `${list.length} libros` : `${list.length} de ${BOOKS.length} libros`;
     const active = ['mueble', 'balda', 'conf', 'origen', 'estado'].filter(k => F[k]).length + (F.sort !== 'orden' ? 1 : 0);
@@ -353,6 +353,7 @@
 
   /* ---------- Arranque ---------- */
   loadUser();
+  if (!BASE.length && !(JSON.parse(localStorage.getItem(KEY)||'{}').added||[]).length) setTimeout(()=>{ const e=$('#empty'); e.querySelector('p')&&(e.querySelector('p').innerHTML='<b>No se ha cargado el catálogo.</b><br>Falta el archivo <code>data/libros.js</code> en el repositorio (o está en otra ruta). Comprueba que existe la carpeta <code>data</code> junto a <code>index.html</code>.'); },0);
   try { const l = localStorage.getItem(KEY + '.layout'); if (l) { F.layout = l; $$('.seg button').forEach(x => x.classList.toggle('on', x.dataset.layout === l)); } } catch (e) { }
   bind(); refreshAll();
   const h = location.hash.slice(1); if (['libros', 'estanterias', 'resumen'].includes(h)) setView(h);
