@@ -54,3 +54,11 @@ Sobrescribe `data/libros.js`.
 
 - `/` enfoca el buscador.
 - 🎲 **Sorpréndeme** propone un libro (prioriza los no leídos y respeta los filtros).
+
+## Notas de esta versión
+
+- `index.html` es un **único archivo autocontenido** (catálogo, estilos, código e icono incrustados): es lo que publica GitHub Pages. `app.js`, `style.css` y `libros.js` son el código fuente de referencia.
+- Añadir libro con **ISBN**: botón 📷 Escanear (cámara) o escribir el ISBN; rellena título, autor y editorial desde Google Books / Open Library.
+- **Préstamos**: en la ficha de cada libro, "Prestar" / "Marcar devuelto"; los pendientes salen en la pestaña Resumen.
+- **Mapa de estantería**: la ficha muestra el mueble con el hueco del libro resaltado.
+- **Sincronización**: ⋯ → repositorio + token de GitHub (permiso Contents: read/write); guarda `data/usuario.json`.

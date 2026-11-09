@@ -188,6 +188,32 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
 .sync label{display:grid;gap:4px}
 .sync input{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line,#ccc);background:var(--card,#fff);color:var(--ink,#222);width:100%}
 [hidden]{display:none!important}
+
+/* ISBN */
+.isbn-row{display:flex;gap:8px}.isbn-row input{flex:1;min-width:0}
+.isbn-box p{margin:6px 0 0}
+.scan-wrap{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;margin:10px 0}
+.scan-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-frame{position:absolute;inset:22% 8%;border:2px solid #fff8;border-radius:10px;box-shadow:0 0 0 999px #0005}
+/* Préstamos */
+.badge-loan{font-size:10.5px;background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:1px 6px;font-weight:600}
+.loan-box{margin:0 20px 8px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,var(--accent) 12%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));font-size:14px}
+.loan-list{display:grid;gap:6px}
+.loan-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer;text-align:left}
+.loan-item small{color:var(--muted)}
+.loan-item.late{border-color:var(--bad)}
+/* Mapa de estantería */
+.minimap{margin:4px 20px 10px;padding:12px;border-radius:14px;background:var(--bg2);border:1px solid var(--line)}
+.minimap h4{margin:0 0 8px;font:600 13px var(--font)}
+.mm-shelf{display:grid;grid-template-columns:28px 1fr;gap:6px;align-items:end;margin-bottom:5px}
+.mm-shelf span{font-size:10.5px;color:var(--muted);text-align:right;padding-bottom:2px}
+.mm-row{display:flex;gap:2px;align-items:flex-end;height:24px;border-bottom:3px solid #a47b4c;padding:0 2px}
+.mm{flex:1 1 0;max-width:11px;height:100%;border:0;padding:0;border-radius:2px 2px 0 0;background:var(--sp);opacity:.42;cursor:pointer}
+.mm-shelf.cur .mm{opacity:.6}
+.mm.me{opacity:1;outline:2px solid var(--accent);outline-offset:1px;position:relative;z-index:1;animation:mmPulse 1.2s ease-in-out infinite}
+@keyframes mmPulse{50%{transform:scaleY(1.18)}}
+@media (prefers-reduced-motion:reduce){.mm.me{animation:none}}
+.btn{text-decoration:none}a.btn{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -229,7 +255,7 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
       <label>Balda<select id="fBalda"></select></label>
       <label>Confianza de lectura<select id="fConf"><option value="">Todas</option><option>Alta</option><option>Media</option><option>Baja</option></select></label>
       <label>Origen<select id="fOrigen"><option value="">Todos</option><option value="video">De los vídeos</option><option value="manual">Añadidos a mano</option></select></label>
-      <label>Estado<select id="fEstado"><option value="">Todos</option><option value="leido">Leídos</option><option value="pendiente">Sin marcar</option><option value="fav">Favoritos</option></select></label>
+      <label>Estado<select id="fEstado"><option value="">Todos</option><option value="leido">Leídos</option><option value="pendiente">Sin marcar</option><option value="fav">Favoritos</option><option value="prestado">Prestados</option></select></label>
       <label>Ordenar por<select id="fSort"><option value="orden">Posición en la estantería</option><option value="titulo">Título (A–Z)</option><option value="autor">Autor (A–Z)</option><option value="nuevos">Añadidos recientemente</option></select></label>
       <button class="btn ghost" id="fReset">Limpiar filtros</button>
     </div>
@@ -260,6 +286,12 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
   <form id="form" method="dialog" autocomplete="off">
     <div class="dlg-head"><h2 id="formTitle">Añadir libro</h2><button type="button" class="x" data-close aria-label="Cerrar">✕</button></div>
     <div class="form-grid">
+      <div class="span2 isbn-box">
+        <label>ISBN (opcional)
+          <div class="isbn-row"><input name="isbn" inputmode="numeric" placeholder="978…" maxlength="17"><button type="button" class="btn" id="isbnScan">📷 Escanear</button><button type="button" class="btn" id="isbnFind">Buscar</button></div>
+        </label>
+        <p class="muted small" id="isbnMsg">Escanea el código de barras del libro o escribe el ISBN y se rellenan título, autor y editorial.</p>
+      </div>
       <label class="span2">Título *<input name="titulo" required maxlength="200"></label>
       <label>Autor<input name="autor" list="dlAutores" maxlength="160"></label>
       <label>Editorial / colección<input name="editorial" list="dlEditoriales" maxlength="120"></label>
@@ -271,12 +303,32 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
       <label>Confianza<select name="confianza"><option>Alta</option><option>Media</option><option>Baja</option></select></label>
       <label class="span2">Notas<textarea name="notas" rows="3" maxlength="600" placeholder="Edición, estado, dedicatoria, dónde está exactamente…"></textarea></label>
     </div>
-    <datalist id="dlAutores"></datalist><datalist id="dlEditoriales"></datalist><datalist id="dlCategorias"></datalist>
+    <datalist id="dlAutores"></datalist><datalist id="dlPrestatarios"></datalist><datalist id="dlEditoriales"></datalist><datalist id="dlCategorias"></datalist>
     <div class="dlg-foot">
       <span class="hint" id="formHint"></span>
       <button type="button" class="btn ghost" data-close>Cancelar</button>
       <button type="submit" class="btn primary" id="formSave">Guardar</button>
     </div>
+  </form>
+</dialog>
+
+<!-- Escáner ISBN -->
+<dialog id="dlgScan" class="dlg small">
+  <div class="dlg-head"><h2>Escanear código de barras</h2><button type="button" class="x" data-close aria-label="Cerrar">✕</button></div>
+  <div class="scan-wrap"><video id="scanVideo" playsinline muted></video><div class="scan-frame"></div></div>
+  <p class="muted small" id="scanMsg">Apunta al código de barras de la contraportada (el que empieza por 978).</p>
+</dialog>
+
+<!-- Préstamo -->
+<dialog id="dlgLoan" class="dlg small">
+  <form id="loanForm" method="dialog" autocomplete="off">
+    <div class="dlg-head"><h2>Prestar libro</h2><button type="button" class="x" data-close aria-label="Cerrar">✕</button></div>
+    <p class="muted" id="loanBook"></p>
+    <div class="form-grid">
+      <label class="span2">¿A quién se lo dejas? *<input name="quien" list="dlPrestatarios" required maxlength="80"></label>
+      <label class="span2">Fecha<input name="fecha" type="date" required></label>
+    </div>
+    <div class="dlg-foot"><button type="button" class="btn ghost" data-close>Cancelar</button><button type="submit" class="btn primary">Guardar préstamo</button></div>
   </form>
 </dialog>
 
@@ -8704,7 +8756,7 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
   const esc = s => (s ?? '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   /* ---------- Estado persistente ---------- */
-  const blank = () => ({ added: [], edits: {}, deleted: [], fav: [], read: [], seq: 0 });
+  const blank = () => ({ added: [], edits: {}, deleted: [], fav: [], read: [], loans: {}, seq: 0 });
   let U = blank();
   function loadUser() {
     try { const r = JSON.parse(localStorage.getItem(KEY)); if (r && typeof r === 'object') U = Object.assign(blank(), r); } catch (e) { U = blank(); }
@@ -8810,6 +8862,7 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
       if (F.estado === 'leido' && !read.has(b.id)) return false;
       if (F.estado === 'pendiente' && read.has(b.id)) return false;
       if (F.estado === 'fav' && !fav.has(b.id)) return false;
+      if (F.estado === 'prestado' && !(U.loans || {})[b.id]) return false;
       return terms.every(t => b._s.includes(t));
     });
     const cmp = {
@@ -8834,6 +8887,7 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
           ${loc(b) ? `<span class="tag loc">${loc(b)}</span>` : ''}
           ${b.confianza && b.confianza !== 'Alta' ? `<span title="Confianza de lectura: ${b.confianza}"><span class="dot ${b.confianza}"></span></span>` : ''}
           ${b.origen === 'manual' ? '<span class="badge-new">añadido</span>' : ''}
+          ${(U.loans || {})[b.id] ? `<span class="badge-loan">Prestado a ${esc(U.loans[b.id].a)}</span>` : ''}
         </div>
       </div>
       <div class="card-act">
@@ -8894,6 +8948,11 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
   }
 
   /* ---------- Render: resumen ---------- */
+  function loansPanel() {
+    const items = Object.entries(U.loans || {}).map(([id, l]) => ({ b: byId(id), l })).filter(x => x.b).sort((x, y) => x.l.f.localeCompare(y.l.f));
+    if (!items.length) return '';
+    return `<div class="panel" style="margin-bottom:14px"><h2>📤 Préstamos pendientes de devolver</h2><div class="loan-list">${items.map(({ b, l }) => { const d = daysSince(l.f); return `<button class="loan-item ${d > 60 ? 'late' : ''}" data-loan="${b.id}"><span><b>${esc(b.titulo)}</b><br><small>${esc(l.a)} · desde ${fmtDate(l.f)}</small></span><small>${d} d</small></button>`; }).join('')}</div></div>`;
+  }
   function renderStats() {
     const read = readSet(), fav = favSet();
     const group = (fn) => { const o = {}; BOOKS.forEach(b => { const k = fn(b); o[k] = (o[k] || 0) + 1; }); return Object.entries(o).sort((a, b) => b[1] - a[1]); };
@@ -8908,14 +8967,59 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
         <div class="kpi"><b>${read.size}</b><span>marcados como leídos</span></div>
         <div class="kpi"><b>${fav.size}</b><span>favoritos</span></div>
         <div class="kpi"><b>${low}</b><span>por revisar (confianza media/baja)</span></div>
+        <div class="kpi"><b>${Object.keys(U.loans || {}).length}</b><span>prestados ahora</span></div>
         <div class="kpi"><b>${U.added.length}</b><span>añadidos a mano</span></div>
       </div>
+      ${loansPanel()}
       <div class="stats">
         <div class="panel"><h2>Por categoría</h2>${bars(group(b => b.categoria), 'cat')}</div>
         <div class="panel"><h2>Autores con más libros</h2>${bars(authors, 'autor')}<p class="muted small">${unk} libros sin autor identificado.</p></div>
         <div class="panel"><h2>Por mueble</h2>${bars(group(b => b.mueble ? 'Mueble ' + b.mueble : 'Sin mueble'), 'mueble')}</div>
         <div class="panel"><h2>Confianza de lectura</h2>${bars(group(b => b.confianza || 'Alta'), 'conf')}<p class="muted small">Media/Baja = lomo parcial o dudoso. Edita esos libros para corregirlos.</p></div>
       </div>`;
+  }
+
+  /* ---------- Préstamos ---------- */
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const daysSince = f => Math.max(0, Math.floor((Date.now() - new Date(f + 'T12:00:00').getTime()) / 864e5));
+  const fmtDate = f => { try { return new Date(f + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return f; } };
+  function loanBox(b) {
+    const l = (U.loans || {})[b.id]; if (!l) return '';
+    const d = daysSince(l.f);
+    return `<div class="loan-box">📤 Prestado a <b>${esc(l.a)}</b> el ${fmtDate(l.f)} · ${d === 0 ? 'hoy' : 'hace ' + d + (d === 1 ? ' día' : ' días')}</div>`;
+  }
+  function openLoan(id) {
+    const b = byId(id); if (!b) return;
+    const f = $('#loanForm'); f.reset(); f.dataset.id = id;
+    $('#loanBook').textContent = '«' + b.titulo + '»';
+    f.elements.fecha.value = today();
+    $('#dlPrestatarios').innerHTML = [...new Set(Object.values(U.loans || {}).map(l => l.a))].map(x => `<option value="${esc(x)}">`).join('');
+    $('#dlgDetail').close(); $('#dlgLoan').showModal(); setTimeout(() => f.elements.quien.focus(), 50);
+  }
+  function saveLoan(e) {
+    e.preventDefault();
+    const f = e.target.elements, id = e.target.dataset.id, quien = f.quien.value.trim();
+    if (!quien) return f.quien.focus();
+    U.loans = U.loans || {}; U.loans[id] = { a: quien, f: f.fecha.value || today() };
+    saveUser(); refreshAll(); $('#dlgLoan').close(); toast('Prestado a ' + quien);
+  }
+  function returnLoan(id) {
+    const l = (U.loans || {})[id]; if (!l) return;
+    delete U.loans[id]; saveUser(); refreshAll(); toast('Devuelto por ' + l.a); if ($('#dlgDetail').open) openDetail(id);
+  }
+
+  /* ---------- Mapa de la estantería ---------- */
+  function miniMap(b) {
+    if (!b.mueble) return '';
+    const mates = BOOKS.filter(x => x.mueble === b.mueble && x.balda);
+    const baldas = [...new Set(mates.map(x => x.balda))].sort((x, y) => x - y);
+    if (!baldas.length) return '';
+    const rows = baldas.map(n => {
+      const bs = mates.filter(x => x.balda === n).sort((x, y) => (x.posicion || 0) - (y.posicion || 0) || x._i - y._i);
+      return `<div class="mm-shelf ${n === b.balda ? 'cur' : ''}"><span>B${n}</span><div class="mm-row">${bs.map(x => `<button class="mm ${x.id === b.id ? 'me' : ''}" data-id="${x.id}" style="--sp:${spine(x)}" title="${esc(x.titulo)}" aria-label="${esc(x.titulo)}"></button>`).join('')}</div></div>`;
+    }).join('');
+    const sh = mates.filter(x => x.balda === b.balda);
+    return `<div class="minimap"><h4>📍 Mueble ${b.mueble}${b.balda ? ' · balda ' + b.balda + (b.posicion ? ` · hueco ${b.posicion} de ${sh.length}` : '') : ''}</h4>${rows}<p class="muted small" style="margin:6px 0 0">La balda 1 es la de arriba; los libros van de izquierda a derecha. Toca uno para abrirlo.</p></div>`;
   }
 
   /* ---------- Detalle ---------- */
@@ -8940,9 +9044,11 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
           ${row('Referencia', b.id)}
         </dl>
       </div></div>
+      ${loanBox(b)}${miniMap(b)}
       <div class="det-actions">
         <button class="btn ${fav ? 'primary' : ''}" data-d="fav">❤️ ${fav ? 'En favoritos' : 'Favorito'}</button>
         <button class="btn ${rd ? 'primary' : ''}" data-d="read">✅ ${rd ? 'Leído' : 'Marcar leído'}</button>
+        ${(U.loans || {})[id] ? '<button class="btn primary" data-d="return">📥 Marcar devuelto</button>' : '<button class="btn" data-d="loan">📤 Prestar</button>'}
         <button class="btn" data-d="edit">✎ Editar</button>
         <a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?q=${q}">🔎 Buscar en Google</a>
         <button class="btn danger" data-d="del">Eliminar</button>
@@ -8957,9 +9063,10 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
     editingId = id || null;
     const f = $('#form'); f.reset();
     $('#formTitle').textContent = id ? 'Editar libro' : 'Añadir libro';
+    $('#isbnMsg').textContent = 'Escanea el código de barras del libro o escribe el ISBN y se rellenan título, autor y editorial.';
     $('#formHint').textContent = id ? '' : 'Si no indicas la posición, se pone al final de la balda.';
     const b = id ? byId(id) : { categoria: 'Narrativa', confianza: 'Alta', ...(prefill || {}) };
-    for (const k of ['titulo', 'autor', 'editorial', 'categoria', 'tomo', 'mueble', 'balda', 'posicion', 'confianza', 'notas']) f.elements[k].value = b[k] ?? '';
+    for (const k of ['isbn', 'titulo', 'autor', 'editorial', 'categoria', 'tomo', 'mueble', 'balda', 'posicion', 'confianza', 'notas']) f.elements[k].value = b[k] ?? '';
     if (!id && !b.mueble) { const last = U.added[U.added.length - 1]; if (last) { f.elements.mueble.value = last.mueble || ''; f.elements.balda.value = last.balda || ''; } }
     $('#dlgDetail').close();
     $('#dlgForm').showModal();
@@ -8970,7 +9077,7 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
     const f = e.target.elements, v = k => f[k].value.trim();
     const num = k => { const n = parseInt(f[k].value, 10); return Number.isFinite(n) && n > 0 ? n : null; };
     const titulo = v('titulo'); if (!titulo) { f.titulo.focus(); return; }
-    const data = { titulo, autor: v('autor'), editorial: v('editorial'), categoria: v('categoria') || 'Sin categoría', tomo: v('tomo'), mueble: num('mueble'), balda: num('balda'), posicion: num('posicion'), confianza: f.confianza.value, notas: v('notas') };
+    const data = { titulo, isbn: v('isbn').replace(/[^0-9Xx]/g, ''), autor: v('autor'), editorial: v('editorial'), categoria: v('categoria') || 'Sin categoría', tomo: v('tomo'), mueble: num('mueble'), balda: num('balda'), posicion: num('posicion'), confianza: f.confianza.value, notas: v('notas') };
     if (!data.posicion && data.mueble && data.balda) {
       data.posicion = 1 + Math.max(0, ...BOOKS.filter(b => b.mueble === data.mueble && b.balda === data.balda && b.id !== editingId).map(b => b.posicion || 0));
     }
@@ -8988,6 +9095,82 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
     $('#dlgForm').close();
   }
 
+  /* ---------- ISBN: escáner y búsqueda ---------- */
+  const isbnOk = s => {
+    s = (s || '').replace(/[^0-9Xx]/g, '').toUpperCase();
+    if (s.length === 13 && /^97[89]/.test(s)) { let t = 0; for (let i = 0; i < 12; i++) t += (+s[i]) * (i % 2 ? 3 : 1); return (10 - t % 10) % 10 === +s[12] ? s : ''; }
+    if (s.length === 10) { let t = 0; for (let i = 0; i < 9; i++) t += (+s[i]) * (10 - i); t += s[9] === 'X' ? 10 : +s[9]; return t % 11 === 0 ? s : ''; }
+    return '';
+  };
+  const isbnMsg = t => { $('#isbnMsg').textContent = t; };
+  async function lookupIsbn(isbn) {
+    try {
+      const r = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + isbn + '&maxResults=1');
+      if (r.ok) { const j = await r.json(), v = j.items && j.items[0] && j.items[0].volumeInfo; if (v && v.title) return { titulo: v.title + (v.subtitle ? ': ' + v.subtitle : ''), autor: (v.authors || []).join(', '), editorial: v.publisher || '' }; }
+    } catch (e) { }
+    try {
+      const r = await fetch('https://openlibrary.org/api/books?bibkeys=ISBN:' + isbn + '&format=json&jscmd=data');
+      if (r.ok) { const j = await r.json(), v = j['ISBN:' + isbn]; if (v && v.title) return { titulo: v.title + (v.subtitle ? ': ' + v.subtitle : ''), autor: (v.authors || []).map(x => x.name).join(', '), editorial: (v.publishers || []).map(x => x.name).join(', ') }; }
+    } catch (e) { }
+    return null;
+  }
+  async function findIsbn(raw) {
+    const f = $('#form').elements, isbn = isbnOk(raw);
+    if (!isbn) return isbnMsg('Ese ISBN no es válido. Revisa los dígitos (10 o 13, el de 13 empieza por 978 o 979).');
+    f.isbn.value = isbn;
+    const dup = BOOKS.find(b => b.isbn === isbn && b.id !== editingId);
+    isbnMsg('Buscando ' + isbn + '…');
+    const r = await lookupIsbn(isbn);
+    if (!r) return isbnMsg('No he encontrado ese ISBN en internet. Rellena los datos a mano.' + (dup ? ' ⚠ Ya lo tienes: «' + dup.titulo + '».' : ''));
+    if (!f.titulo.value.trim()) f.titulo.value = r.titulo;
+    if (!f.autor.value.trim()) f.autor.value = r.autor;
+    if (!f.editorial.value.trim()) f.editorial.value = r.editorial;
+    const dupT = !dup && BOOKS.find(b => b.id !== editingId && norm(b.titulo) === norm(r.titulo));
+    isbnMsg('✓ Encontrado: ' + r.titulo + (r.autor ? ' — ' + r.autor : '') + (dup ? ' ⚠ Ya lo tienes en la librería.' : dupT ? ' ⚠ Ya hay un libro con este título (posible duplicado).' : ''));
+  }
+  let scanStream = null, scanTimer = null, zxReader = null;
+  function stopScan() {
+    clearInterval(scanTimer); scanTimer = null;
+    zxReader = null;
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    const v = $('#scanVideo'); if (v) v.srcObject = null;
+  }
+  function loadZxing() {
+    return new Promise((ok, ko) => {
+      if (window.ZXing) return ok();
+      const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+      s.onload = ok; s.onerror = () => ko(new Error('zxing')); document.head.appendChild(s);
+    });
+  }
+  async function startScan() {
+    const msg = t => { $('#scanMsg').textContent = t; };
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return isbnMsg('Este navegador no permite usar la cámara. Escribe el ISBN a mano.');
+    $('#dlgScan').showModal(); msg('Abriendo la cámara…');
+    const found = code => { const i = isbnOk(code); if (!i) return; stopScan(); $('#dlgScan').close(); findIsbn(i); };
+    try { scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
+    catch (e) { $('#dlgScan').close(); return isbnMsg('No se pudo abrir la cámara (permiso denegado). Escribe el ISBN a mano.'); }
+    const v = $('#scanVideo'); v.srcObject = scanStream; try { await v.play(); } catch (e) { }
+    msg('Apunta al código de barras de la contraportada (el que empieza por 978).');
+    if ('BarcodeDetector' in window) {
+      try {
+        const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a'] });
+        scanTimer = setInterval(async () => { try { const r = await det.detect(v); r.forEach(x => found(x.rawValue)); } catch (e) { } }, 300);
+        return;
+      } catch (e) { }
+    }
+    try {
+      await loadZxing();
+      const hints = new Map(); hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8]);
+      zxReader = new ZXing.MultiFormatReader(); zxReader.setHints(hints);
+      const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+      scanTimer = setInterval(() => {
+        if (!v.videoWidth) return;
+        cv.width = v.videoWidth; cv.height = v.videoHeight; cx.drawImage(v, 0, 0);
+        try { const res = zxReader.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(cv)))); if (res) found(res.getText()); } catch (e) { }
+      }, 250);
+    } catch (e) { msg('No se pudo cargar el lector de códigos. Cierra y escribe el ISBN a mano.'); }
+  }
+
   /* ---------- Acciones ---------- */
   function toggle(arr, id) { const i = arr.indexOf(id); i >= 0 ? arr.splice(i, 1) : arr.push(id); return i < 0; }
   function deleteBook(id) {
@@ -8995,7 +9178,7 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
     if (!confirm(`¿Eliminar «${b.titulo}» de la librería?\n(Podrás recuperarlo restaurando una copia de seguridad.)`)) return;
     const m = U.added.findIndex(x => x.id === id);
     if (m >= 0) U.added.splice(m, 1); else U.deleted.push(id);
-    U.fav = U.fav.filter(x => x !== id); U.read = U.read.filter(x => x !== id);
+    U.fav = U.fav.filter(x => x !== id); U.read = U.read.filter(x => x !== id); if (U.loans) delete U.loans[id];
     saveUser(); refreshAll(); $('#dlgDetail').close(); toast('Libro eliminado');
   }
   function random() {
@@ -9013,7 +9196,7 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
     a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
-  const clean = b => ({ id: b.id, titulo: b.titulo, autor: b.autor || '', editorial: b.editorial || '', tomo: b.tomo || '', categoria: b.categoria, video: b.video || '', mueble: b.mueble ?? null, balda: b.balda ?? null, posicion: b.posicion ?? null, confianza: b.confianza || 'Alta', notas: b.notas || '' });
+  const clean = b => ({ id: b.id, isbn: b.isbn || '', titulo: b.titulo, autor: b.autor || '', editorial: b.editorial || '', tomo: b.tomo || '', categoria: b.categoria, video: b.video || '', mueble: b.mueble ?? null, balda: b.balda ?? null, posicion: b.posicion ?? null, confianza: b.confianza || 'Alta', notas: b.notas || '' });
   function exportJs() {
     const arr = BOOKS.slice().sort((a, b) => (a.mueble || 99) - (b.mueble || 99) || (a.balda || 99) - (b.balda || 99) || (a.posicion || 0) - (b.posicion || 0) || a._i - b._i).map(clean);
     download('libros.js', 'window.LIBROS = ' + JSON.stringify(arr, null, 0).replace(/\},\{/g, '},\n{') + ';\n', 'text/javascript');
@@ -9076,6 +9259,7 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
     $('#grid').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('card')) openDetail(e.target.dataset.id); });
     $('#view-estanterias').addEventListener('click', e => { const b = e.target.closest('.bk'); if (b) openDetail(b.dataset.id); });
     $('#view-resumen').addEventListener('click', e => {
+      const ln = e.target.closest('[data-loan]'); if (ln) return openDetail(ln.dataset.loan);
       const bar = e.target.closest('.bar'); if (!bar) return;
       const k = bar.dataset.k, v = bar.dataset.v;
       Object.assign(F, { q: '', cat: '', mueble: '', balda: '', conf: '', origen: '', estado: '', shown: PAGE });
@@ -9088,8 +9272,11 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
     $('#detail').addEventListener('click', e => {
       const id = $('#detail').dataset.id, d = e.target.closest('[data-d]');
       if (e.target.closest('[data-close]')) return $('#dlgDetail').close();
+      const mm = e.target.closest('.mm'); if (mm) return openDetail(mm.dataset.id);
       if (!d) return;
       if (d.dataset.d === 'edit') return openForm(id);
+      if (d.dataset.d === 'loan') return openLoan(id);
+      if (d.dataset.d === 'return') return returnLoan(id);
       if (d.dataset.d === 'del') return deleteBook(id);
       toggle(d.dataset.d === 'fav' ? U.fav : U.read, id); saveUser(); refreshAll(); openDetail(id);
     });
@@ -9097,6 +9284,10 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0}
       dlg.addEventListener('click', e => { if (e.target === dlg || e.target.closest('[data-close]')) dlg.close(); });
     });
     $('#form').addEventListener('submit', submitForm);
+    $('#loanForm').addEventListener('submit', saveLoan);
+    $('#isbnScan').onclick = startScan; $('#isbnFind').onclick = () => findIsbn($('#form').elements.isbn.value);
+    $('#form').elements.isbn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); findIsbn(e.target.value); } });
+    $('#dlgScan').addEventListener('close', stopScan);
     $('#btnAdd').onclick = () => openForm(null);
     $('#emptyAdd').onclick = () => openForm(null, { titulo: F.q });
     $('#btnRandom').onclick = random;
